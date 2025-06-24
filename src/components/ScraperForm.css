@@ -358,6 +358,14 @@ button[type="submit"]:disabled {
   background-color: #ff5252;
 }
 
+.reset-button.force-start {
+  background-color: #4a6fc7;
+}
+
+.reset-button.force-start:hover {
+  background-color: #3a5fa7;
+}
+
 .reset-info {
   font-size: 0.8rem;
   margin-top: 5px;

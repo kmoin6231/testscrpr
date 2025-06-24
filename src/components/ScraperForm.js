@@ -133,8 +133,7 @@ const ScraperForm = () => {
   
   // Clear logs
   const clearLogs = () => {
-    setLogs('No logs yet. Start scraping to see real-time updates here.');
-  };
+    setLogs('No logs yet. Start scraping to see real-time updates here.');  };
   
   // Load example data
   const loadExampleData = () => {
@@ -144,7 +143,37 @@ const ScraperForm = () => {
     setStartIndex('1');
     setLastIndex('10');
   };
-    // Handle form submission  const handleSubmit = async (e) => {
+  
+  // Set up event source for real-time logs
+  const startEventSource = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    
+    eventSourceRef.current = apiService.getEventSource();
+    
+    if (eventSourceRef.current) {
+      eventSourceRef.current.onmessage = (event) => {
+        const msg = event.data;
+        setLogs(prevLogs => {
+          if (prevLogs === 'No logs yet. Start scraping to see real-time updates here.') {
+            return msg;
+          }
+          return prevLogs + '\n' + msg;
+        });
+      };
+      
+      eventSourceRef.current.onerror = (error) => {
+        console.error('EventSource error:', error);
+        setLogs(prevLogs => prevLogs + '\nLost connection to server log stream. Will continue in background.');
+      };
+    } else {
+      setLogs(prevLogs => prevLogs + '\nYour browser doesn\'t support real-time logging or the server is unavailable.');
+    }
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Clear previous error
@@ -193,35 +222,10 @@ const ScraperForm = () => {
     
     // Set up loading state
     setIsLoading(true);
-    setStatusMessage('Starting scraping process...');
-    setLogs('Starting...');
+    setStatusMessage('Starting scraping process...');    setLogs('Starting...');
     setZipAvailable(false);
     
-    // Set up event source for real-time logs
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
-    
-    eventSourceRef.current = apiService.getEventSource();
-    
-    if (eventSourceRef.current) {
-      eventSourceRef.current.onmessage = (event) => {
-        const msg = event.data;
-        setLogs(prevLogs => {
-          if (prevLogs === 'No logs yet. Start scraping to see real-time updates here.') {
-            return msg;
-          }
-          return prevLogs + '\n' + msg;
-        });
-      };
-      
-      eventSourceRef.current.onerror = (error) => {
-        console.error('EventSource error:', error);
-        setLogs(prevLogs => prevLogs + '\nLost connection to server log stream. Will continue in background.');
-      };
-    } else {
-      setLogs(prevLogs => prevLogs + '\nYour browser doesn\'t support real-time logging or the server is unavailable.');
-    }
+    startEventSource();
     
     try {
       // Start scraping
@@ -236,10 +240,9 @@ const ScraperForm = () => {
       const response = await apiService.startScraping(data);
       setLogs(prevLogs => prevLogs + '\n' + response.message);
       setZipAvailable(true);
-      setStatusMessage('Scraping completed successfully!');
-    } catch (error) {
+      setStatusMessage('Scraping completed successfully!');    } catch (error) {
       setError(`Error: ${error.message || 'An unknown error occurred'}`);
-      setLogs(prevLogs => prevLogs + '\n' + `Error: ${error.message || 'An unknown error occurred'}`);
+      setLogs(prevLogs => `${prevLogs}\nError: ${error.message || 'An unknown error occurred'}`);
     } finally {
       setIsLoading(false);
       setShowSpinner(false);
@@ -341,10 +344,9 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
       setLogs(prevLogs => prevLogs + '\nAborting operation...');
       const response = await apiService.abortScraping();
       setLogs(prevLogs => prevLogs + '\n' + response.message);
-      setStatusMessage('Operation aborted');
-    } catch (error) {
+      setStatusMessage('Operation aborted');    } catch (error) {
       setError(`Error during abort: ${error.message || 'An unknown error occurred'}`);
-      setLogs(prevLogs => prevLogs + '\n' + `Error during abort: ${error.message || 'An unknown error occurred'}`);
+      setLogs(prevLogs => `${prevLogs}\nError during abort: ${error.message || 'An unknown error occurred'}`);
     } finally {
       setShowSpinner(false);
     }
@@ -378,10 +380,9 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
       await apiService.downloadZipFile(folderName);
       
       setStatusMessage('ZIP file downloaded successfully!');
-      setLogs(prevLogs => prevLogs + '\nZIP file downloaded successfully!');
-    } catch (error) {
+      setLogs(prevLogs => prevLogs + '\nZIP file downloaded successfully!');    } catch (error) {
       setError(`Error with ZIP: ${error.message || 'An unknown error occurred'}`);
-      setLogs(prevLogs => prevLogs + '\n' + `Error with ZIP: ${error.message || 'An unknown error occurred'}`);
+      setLogs(prevLogs => `${prevLogs}\nError with ZIP: ${error.message || 'An unknown error occurred'}`);
     } finally {
       setShowSpinner(false);
     }
@@ -521,13 +522,20 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
         <div className="error-banner">
           <div>{error}</div>
           {scrapingStuck && (
-            <div className="reset-section">
-              <button 
+            <div className="reset-section">              <button 
                 type="button" 
                 onClick={resetScrapingOperation}
                 className="reset-button"
               >
                 Reset Stuck Scraping Operation
+              </button>
+              <button 
+                type="button" 
+                onClick={forceStartScraping}
+                className="reset-button force-start"
+                style={{ marginTop: "10px" }}
+              >
+                Force Start New Scraping
               </button>
               <p className="reset-info">
                 This will reset the current scraping operation and allow you to start a new one.

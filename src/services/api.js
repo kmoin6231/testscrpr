@@ -17,7 +17,7 @@ const api = axios.create({
 
 // Add retry interceptor
 api.interceptors.response.use(undefined, async (err) => {
-  const { config, message } = err;
+  const { config } = err; // Removed unused 'message' variable
   if (!config || !config.retry) {
     return Promise.reject(err);
   }
