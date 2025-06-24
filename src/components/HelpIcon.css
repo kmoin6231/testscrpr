@@ -1,0 +1,14 @@
+.help-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  vertical-align: middle;
+  cursor: help;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  stroke: var(--primary-text);
+}
+
+.help-icon:hover {
+  opacity: 1;
+}
