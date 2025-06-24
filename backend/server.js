@@ -48,6 +48,75 @@ let driver = null;
 let isScrapingActive = false;
 let logMessages = [];
 let clients = [];
+let downloadProgress = {}; // Track download progress for each file
+
+// Utility function to get file size
+function getFileSizeInBytes(filePath) {
+  try {
+    const stats = fs.statSync(filePath);
+    return stats.size;
+  } catch (error) {
+    console.error(`Error getting file size: ${error.message}`);
+    return 0;
+  }
+}
+
+// Utility function to format file size
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// File system watcher to monitor downloads
+function watchDownloadFolder(folderPath) {
+  logMessage(`Monitoring downloads in folder: ${folderPath}`, 'INFO');
+  
+  // Initial scan of existing files
+  try {
+    const files = fs.readdirSync(folderPath);
+    files.forEach(file => {
+      const filePath = path.join(folderPath, file);
+      downloadProgress[file] = {
+        path: filePath,
+        size: getFileSizeInBytes(filePath),
+        complete: true
+      };
+    });
+  } catch (error) {
+    logMessage(`Error scanning folder: ${error.message}`, 'ERROR');
+  }
+  
+  // Watch for file changes
+  fs.watch(folderPath, { persistent: true }, (eventType, filename) => {
+    if (!filename) return;
+    
+    const filePath = path.join(folderPath, filename);
+    
+    try {
+      if (fs.existsSync(filePath)) {
+        const fileSize = getFileSizeInBytes(filePath);
+        const isComplete = eventType === 'rename' && fileSize > 0;
+        
+        downloadProgress[filename] = {
+          path: filePath,
+          size: fileSize,
+          complete: isComplete
+        };
+        
+        const formattedSize = formatFileSize(fileSize);
+        const status = isComplete ? 'Downloaded' : 'Downloading';
+        logMessage(`${status}: ${filename} (${formattedSize})`, isComplete ? 'SUCCESS' : 'INFO');
+        
+        // Broadcast progress to clients
+        broadcastDownloadProgress();
+      }
+    } catch (error) {
+      console.error(`Error watching file ${filename}: ${error.message}`);
+    }
+  });
+}
 
 // SSE endpoint for real-time logging
 app.get('/stream', (req, res) => {
@@ -89,6 +158,18 @@ function logMessage(message, level = 'INFO') {
   
   // Log to console as well
   console.log(formattedMessage);
+}
+
+// Broadcast download progress to clients
+function broadcastDownloadProgress() {
+  const progressData = {
+    type: 'download_progress',
+    data: downloadProgress
+  };
+  
+  clients.forEach(client => {
+    client.res.write(`data: ${JSON.stringify(progressData)}\n\n`);
+  });
 }
 
 // Configure Chrome options
@@ -184,12 +265,15 @@ app.post('/scrape', async (req, res) => {
     isScrapingActive = false;
     return res.status(400).json({ message: "Login URL, table URLs, and folder name are required." });
   }
-  
-  // Create folder for PDFs
+    // Create folder for PDFs
   const saveDir = path.join(SAVE_DIR, folderName);
   try {
     fs.mkdirSync(saveDir, { recursive: true });
     logMessage(`PDFs will be saved to: ${saveDir}`, 'INFO');
+    
+    // Initialize download progress tracking
+    downloadProgress = {}; // Reset download progress
+    watchDownloadFolder(saveDir);
   } catch (error) {
     isScrapingActive = false;
     return res.status(400).json({ message: `Error creating save directory: ${error.message}` });
@@ -422,6 +506,16 @@ app.post('/create-zip', (req, res) => {
   }
 });
 
+// Route to get download progress
+app.get('/download-progress', (req, res) => {
+  res.json({
+    downloadProgress,
+    totalFiles: Object.keys(downloadProgress).length,
+    completedFiles: Object.values(downloadProgress).filter(file => file.complete).length,
+    totalSize: Object.values(downloadProgress).reduce((total, file) => total + file.size, 0)
+  });
+});
+
 // Catch-all route to serve the React app for any unknown routes
 // This must be placed after all API routes
 if (process.env.NODE_ENV === 'production') {
@@ -434,3 +528,6 @@ if (process.env.NODE_ENV === 'production') {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+// Start watching the download folder
+watchDownloadFolder(SAVE_DIR);

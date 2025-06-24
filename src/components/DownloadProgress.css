@@ -1,0 +1,147 @@
+.download-progress {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .download-progress {
+  background-color: #2a2a2a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.download-progress h3 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.dark .download-progress h3 {
+  color: #e0e0e0;
+  border-bottom: 1px solid #444;
+}
+
+.progress-summary {
+  margin: 15px 0;
+}
+
+.progress-bar-container {
+  height: 20px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dark .progress-bar-container {
+  background-color: #444;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #007bff;
+  transition: width 0.3s ease;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 14px;
+  color: #666;
+}
+
+.dark .progress-stats {
+  color: #aaa;
+}
+
+.file-list {
+  margin-top: 15px;
+}
+
+.file-list h4 {
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.dark .file-list h4 {
+  color: #ccc;
+}
+
+.file-list-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.dark .file-list-container {
+  border-color: #444;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.dark .file-item {
+  border-bottom: 1px solid #333;
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+.file-item.complete {
+  background-color: #e8f5e9;
+}
+
+.dark .file-item.complete {
+  background-color: #1e3320;
+}
+
+.file-item.downloading {
+  background-color: #fff3e0;
+}
+
+.dark .file-item.downloading {
+  background-color: #332a1c;
+}
+
+.file-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  width: 100px;
+  text-align: right;
+  margin: 0 10px;
+}
+
+.file-status {
+  width: 120px;
+  text-align: right;
+}
+
+.file-item.complete .file-status {
+  color: #4caf50;
+}
+
+.dark .file-item.complete .file-status {
+  color: #8bc34a;
+}
+
+.file-item.downloading .file-status {
+  color: #ff9800;
+}
+
+.dark .file-item.downloading .file-status {
+  color: #ffc107;
+}

@@ -63,6 +63,16 @@ export const apiService = {
     }
   },
   
+  // Get download progress
+  getDownloadProgress: async () => {
+    try {
+      const response = await api.get('/download-progress');
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
   // Get event source for real-time logging
   getEventSource: () => {
     return new EventSource(`${API_URL}/stream`);

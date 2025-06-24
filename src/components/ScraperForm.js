@@ -5,6 +5,7 @@ import Spinner from './Spinner';
 import Tooltip from './Tooltip';
 import HelpIcon from './HelpIcon';
 import ConfirmDialog from './ConfirmDialog';
+import DownloadProgress from './DownloadProgress';
 
 const ScraperForm = () => {
   // State variables
@@ -25,6 +26,8 @@ const ScraperForm = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState('');
+  const [downloadProgress, setDownloadProgress] = useState({});
+  const [showDownloadProgress, setShowDownloadProgress] = useState(false);
   
   // Refs
   const statusRef = useRef(null);
@@ -46,6 +49,41 @@ const ScraperForm = () => {
       statusRef.current.scrollTop = statusRef.current.scrollHeight;
     }
   }, [logs]);
+  
+  // Effect for polling download progress
+  useEffect(() => {
+    let progressInterval = null;
+    
+    if (isLoading) {
+      // Start polling for download progress
+      setShowDownloadProgress(true);
+      progressInterval = setInterval(async () => {
+        try {
+          const progressData = await apiService.getDownloadProgress();
+          setDownloadProgress(progressData.downloadProgress || {});
+          
+          // If no more files are being downloaded, slow down polling
+          if (progressData.completedFiles === progressData.totalFiles && progressData.totalFiles > 0) {
+            clearInterval(progressInterval);
+            progressInterval = setInterval(async () => {
+              const refreshData = await apiService.getDownloadProgress();
+              setDownloadProgress(refreshData.downloadProgress || {});
+            }, 5000); // Check every 5 seconds for new files
+          }
+        } catch (error) {
+          console.error('Error fetching download progress:', error);
+        }
+      }, 1000); // Poll every second initially
+    } else if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+    
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    };
+  }, [isLoading]);
   
   // Clean up event source on unmount
   useEffect(() => {
@@ -401,15 +439,26 @@ const ScraperForm = () => {
               {content}
             </div>
           );
-        })}
-      </div>
+        })}      </div>
       
-      <div className="log-controls">
-        <button type="button" onClick={clearLogs} className="control-button">
+      {/* Download Progress Display */}
+      {showDownloadProgress && Object.keys(downloadProgress).length > 0 && (
+        <DownloadProgress downloadProgress={downloadProgress} />
+      )}
+      
+      <div className="log-controls">        <button type="button" onClick={clearLogs} className="control-button">
           Clear Logs
         </button>
         <button type="button" onClick={loadExampleData} className="control-button">
           Load Example Data
+        </button>
+        <button 
+          type="button" 
+          onClick={() => setShowDownloadProgress(!showDownloadProgress)} 
+          className="control-button"
+          disabled={Object.keys(downloadProgress).length === 0}
+        >
+          {showDownloadProgress ? 'Hide Download Progress' : 'Show Download Progress'}
         </button>
       </div>
     </div>

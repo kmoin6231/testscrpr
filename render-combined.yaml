@@ -2,7 +2,7 @@ services:
   - type: web
     name: waqf-scraper
     env: node
-    buildCommand: npm install && npm install --prefix backend && npm run build
+    buildCommand: chmod +x ./build.sh && ./build.sh
     startCommand: node backend/server.js
     plan: free
     envVars:
