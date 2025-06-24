@@ -2,14 +2,18 @@ services:
   - type: web
     name: waqf-scraper
     env: node
-    buildCommand: npm install && npm run build:combined
-    startCommand: npm run start:combined
+    buildCommand: chmod +x ./build.sh && ./build.sh
+    startCommand: node backend/server.js
     plan: free
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+    disk:
+      name: pdf-storage
+      mountPath: /opt/render/project/src/backend/pdf_output
+      sizeGB: 1
     routes:
       - type: rewrite
         source: /*
