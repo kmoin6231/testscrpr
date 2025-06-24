@@ -62,7 +62,7 @@ A modern web application for scraping Waqf document data, generating PDFs, and c
    npm start
    ```
 
-3. Access the application at http://localhost:3000
+3. Access the application at http://localhost:10000
 
 ## Using the Application
 
