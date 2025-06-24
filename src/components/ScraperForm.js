@@ -6,6 +6,7 @@ import Tooltip from './Tooltip';
 import HelpIcon from './HelpIcon';
 import ConfirmDialog from './ConfirmDialog';
 import DownloadProgress from './DownloadProgress';
+import TestResults from './TestResults';
 
 const ScraperForm = () => {
   // State variables
@@ -28,6 +29,8 @@ const ScraperForm = () => {
   const [confirmMessage, setConfirmMessage] = useState('');
   const [downloadProgress, setDownloadProgress] = useState({});
   const [showDownloadProgress, setShowDownloadProgress] = useState(false);
+  const [testResults, setTestResults] = useState(null);
+  const [isTesting, setIsTesting] = useState(false);
   
   // Refs
   const statusRef = useRef(null);
@@ -184,6 +187,70 @@ const ScraperForm = () => {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
+    }
+  };
+  
+  // Handle testing of scraping configuration
+  const handleTestConfiguration = async (e) => {
+    e.preventDefault();
+    
+    // Clear previous error
+    setError('');
+    setTestResults(null);
+    
+    // Validate form inputs
+    if (!loginUrl || !tableUrls || !folderName) {
+      setError('Please fill in all required fields to test the configuration');
+      return;
+    }
+    
+    // Format table URLs
+    const formattedTableUrls = tableUrls
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url);
+      
+    if (formattedTableUrls.length === 0) {
+      setError('Please enter at least one valid table URL');
+      return;
+    }
+    
+    // Show loading state
+    setIsTesting(true);
+    setStatusMessage('Testing your configuration...');
+    
+    try {
+      // Test configuration
+      const data = {
+        loginUrl,
+        urls: formattedTableUrls,
+        folderName
+      };
+      
+      const response = await apiService.testScraping(data);
+      setTestResults(response);
+      setStatusMessage('Testing completed');
+      
+      // Add test results to logs
+      setLogs(prevLogs => {
+        const initialLog = prevLogs === 'No logs yet. Start scraping to see real-time updates here.' ? '' : prevLogs + '\n';
+        return initialLog + `
+--- Configuration Test Results ---
+Login URL: ${response.loginTest?.success ? 'Accessible ✓' : 'Not Accessible ✗'}
+Table URL: ${response.tableTest?.success ? 'Accessible ✓' : 'Not Accessible ✗'}
+${response.tableTest?.hasRows !== undefined ? `Table Rows: ${response.tableTest.hasRows ? 'Detected ✓' : 'Not Detected ⚠️'}` : ''}
+Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
+`;
+      });
+      
+    } catch (error) {
+      setError(`Test failed: ${error.message || 'An unknown error occurred'}`);
+      setLogs(prevLogs => {
+        const initialLog = prevLogs === 'No logs yet. Start scraping to see real-time updates here.' ? '' : prevLogs + '\n';
+        return initialLog + `Test failed: ${error.message || 'An unknown error occurred'}`;
+      });
+    } finally {
+      setIsTesting(false);
     }
   };
   
@@ -376,24 +443,42 @@ const ScraperForm = () => {
             />
           </div>
         </div>
-        
-        <div className="button-container">
-          <button type="submit" disabled={isLoading} className={isLoading ? 'loading-button' : ''}>
-            {isLoading ? (
-              <>
-                <span className="button-spinner"></span>
-                Processing...
-              </>
-            ) : 'Start Scraping'}
-          </button>
-          <button 
-            type="button" 
-            id="abortButton" 
-            onClick={confirmAbort}
-            disabled={!isLoading}
-          >
-            Abort
-          </button>
+          <div className="button-container">
+          <div className="main-buttons">
+            <button 
+              type="submit" 
+              disabled={isLoading || isTesting} 
+              className={isLoading ? 'loading-button' : ''}
+            >
+              {isLoading ? (
+                <>
+                  <span className="button-spinner"></span>
+                  Processing...
+                </>
+              ) : 'Start Scraping'}
+            </button>
+            <button 
+              type="button" 
+              onClick={handleTestConfiguration}
+              disabled={isLoading || isTesting}
+              className={isTesting ? 'loading-button' : 'test-button'}
+            >
+              {isTesting ? (
+                <>
+                  <span className="button-spinner"></span>
+                  Testing...
+                </>
+              ) : 'Test Configuration'}
+            </button>
+            <button 
+              type="button" 
+              id="abortButton" 
+              onClick={confirmAbort}
+              disabled={!isLoading}
+            >
+              Abort
+            </button>
+          </div>
           <div className="button-row">
             <button 
               type="button" 
@@ -414,6 +499,30 @@ const ScraperForm = () => {
           </div>
         </div>
       </form>
+      
+      <div className="test-configuration">
+        <h2>Test Scraping Configuration</h2>
+        <button 
+          type="button" 
+          onClick={handleTestConfiguration}
+          disabled={isTesting}
+          className={isTesting ? 'loading-button' : ''}
+        >
+          {isTesting ? (
+            <>
+              <span className="button-spinner"></span>
+              Testing...
+            </>
+          ) : 'Test Configuration'}
+        </button>
+        
+        {testResults && (
+          <div className="test-results">
+            <h3>Test Results</h3>
+            <pre>{JSON.stringify(testResults, null, 2)}</pre>
+          </div>
+        )}
+      </div>
       
       <div 
         id="status" 
@@ -440,6 +549,30 @@ const ScraperForm = () => {
             </div>
           );
         })}      </div>
+      
+      {/* Confirm Dialog */}
+      {showConfirmDialog && (
+        <ConfirmDialog
+          message={confirmMessage}
+          onConfirm={() => {
+            setShowConfirmDialog(false);
+            if (confirmAction === 'abort') {
+              handleAbort();
+            } else if (confirmAction === 'createZip') {
+              handleCreateZip();
+            }
+          }}
+          onCancel={() => setShowConfirmDialog(false)}
+        />
+      )}
+      
+      {/* Test Results Dialog */}
+      {testResults && (
+        <TestResults
+          testResults={testResults}
+          onClose={() => setTestResults(null)}
+        />
+      )}
       
       {/* Download Progress Display */}
       {showDownloadProgress && Object.keys(downloadProgress).length > 0 && (

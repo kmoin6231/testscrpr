@@ -516,6 +516,142 @@ app.get('/download-progress', (req, res) => {
   });
 });
 
+// Route to test scraping configuration
+app.post('/test-scrape', async (req, res) => {
+  const { loginUrl, urls, folderName } = req.body;
+  
+  // Validate input
+  if (!loginUrl || !urls || !folderName) {
+    return res.status(400).json({ 
+      success: false, 
+      message: "Login URL, table URLs, and folder name are required." 
+    });
+  }
+  
+  // Check if URL is accessible
+  let testDriver = null;
+  try {
+    logMessage(`Testing configuration: ${loginUrl}`, 'INFO');
+    
+    // Create temporary test folder
+    const testDir = path.join(SAVE_DIR, '_test_' + Date.now());
+    fs.mkdirSync(testDir, { recursive: true });
+    
+    // Initialize a temporary driver
+    const options = getChromeOptions(testDir);
+    testDriver = await new Builder()
+      .forBrowser('chrome')
+      .setChromeOptions(options)
+      .build();
+    
+    // Test login URL
+    await testDriver.get(loginUrl);
+    logMessage("Successfully accessed login URL", 'SUCCESS');
+    
+    // Check page title and source
+    const title = await testDriver.getTitle();
+    const source = await testDriver.getPageSource();
+    
+    // Simple checks for common issues
+    const isLoginPage = 
+      title.toLowerCase().includes('login') || 
+      source.toLowerCase().includes('login') ||
+      source.toLowerCase().includes('password') ||
+      source.toLowerCase().includes('username') ||
+      source.toLowerCase().includes('signin');
+    
+    // Get page screenshot for verification
+    const screenshot = await testDriver.takeScreenshot();
+    const screenshotPath = path.join(testDir, 'test_screenshot.png');
+    fs.writeFileSync(screenshotPath, screenshot, 'base64');
+    
+    // Test one table URL if provided
+    let tableTestResult = null;
+    if (urls && urls.length > 0) {
+      try {
+        logMessage(`Testing first table URL: ${urls[0]}`, 'INFO');
+        await testDriver.executeScript(`window.open('${urls[0]}', '_blank');`);
+        
+        // Switch to the new tab
+        const handles = await testDriver.getAllWindowHandles();
+        await testDriver.switchTo().window(handles[handles.length - 1]);
+        
+        // Wait for page to load
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Check if the page has tables or rows
+        let hasRows = false;
+        try {
+          const rows = await testDriver.findElements(By.xpath('//tr'));
+          hasRows = rows.length > 0;
+          if (hasRows) {
+            logMessage(`Found ${rows.length} rows in the table`, 'SUCCESS');
+          } else {
+            logMessage("No table rows found", 'WARNING');
+          }
+        } catch (error) {
+          logMessage(`Error finding table rows: ${error.message}`, 'WARNING');
+        }
+        
+        // Get table page screenshot
+        const tableScreenshot = await testDriver.takeScreenshot();
+        const tableScreenshotPath = path.join(testDir, 'table_test_screenshot.png');
+        fs.writeFileSync(tableScreenshotPath, tableScreenshot, 'base64');
+        
+        tableTestResult = {
+          success: true,
+          hasRows,
+          message: hasRows ? `Found ${rows.length} rows in the table` : "No table rows found"
+        };
+      } catch (error) {
+        tableTestResult = {
+          success: false,
+          message: `Error accessing table URL: ${error.message}`
+        };
+        logMessage(`Error testing table URL: ${error.message}`, 'ERROR');
+      }
+    }
+    
+    // Clean up test directory
+    try {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    } catch (error) {
+      console.error(`Error cleaning up test directory: ${error.message}`);
+    }
+    
+    return res.json({
+      success: true,
+      loginTest: {
+        success: true,
+        isLoginPage,
+        title,
+        message: "Login URL is accessible"
+      },
+      tableTest: tableTestResult,
+      folderTest: {
+        success: true,
+        message: `Folder '${folderName}' will be created for saving PDFs`
+      }
+    });
+    
+  } catch (error) {
+    logMessage(`Test failed: ${error.message}`, 'ERROR');
+    return res.status(400).json({
+      success: false,
+      message: `Test failed: ${error.message}`
+    });
+  } finally {
+    if (testDriver) {
+      try {
+        await testDriver.quit();
+        logMessage("Test browser closed", 'INFO');
+      } catch (error) {
+        console.error(`Error closing test browser: ${error.message}`);
+      }
+    }
+  }
+});
+
 // Catch-all route to serve the React app for any unknown routes
 // This must be placed after all API routes
 if (process.env.NODE_ENV === 'production') {

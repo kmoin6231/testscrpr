@@ -153,6 +153,17 @@ textarea {
   gap: 0.7rem;
 }
 
+.main-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.main-buttons button {
+  flex: 1;
+  min-width: 150px;
+}
+
 .button-row {
   display: flex;
   gap: 0.7rem;
@@ -196,6 +207,11 @@ button[type="submit"]:disabled {
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   width: 100%;
+}
+
+#abortButton:hover:not(:disabled) {
+  background: var(--abort-btn-text);
+  color: var(--abort-btn-bg);
 }
 
 #abortButton:disabled {
@@ -246,6 +262,24 @@ button[type="submit"]:disabled {
 
 #submitDataButton:hover {
   background: var(--button-hover-gradient);
+}
+
+.test-button {
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  padding: 14px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+  width: 100%;
+}
+
+.test-button:hover:not(:disabled) {
+  background: #0284c7;
 }
 
 #status {

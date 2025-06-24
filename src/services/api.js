@@ -76,5 +76,15 @@ export const apiService = {
   // Get event source for real-time logging
   getEventSource: () => {
     return new EventSource(`${API_URL}/stream`);
-  }
+  },
+
+  // Test scraping configuration
+  testScraping: async (data) => {
+    try {
+      const response = await api.post('/test-scrape', data);
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
