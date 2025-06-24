@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 const { DateTime } = require('luxon');
+const PDFDocument = require('pdfkit');
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -376,15 +377,48 @@ app.post('/scrape', async (req, res) => {
           // Switch to new tab
           await driver.switchTo().window(handles[handles.length - 1]);
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Generate PDF
-          const pdf = await driver.executeScript('return document.documentElement.outerHTML');
+            // Generate proper PDF using PDFKit
+          const html = await driver.executeScript('return document.documentElement.outerHTML');
+          const title = await driver.getTitle();
           const pdfPath = path.join(saveDir, filename);
           
-          // In a real implementation, we would use a PDF generation library like puppeteer
-          // For this example, we'll simulate PDF creation with HTML content
-          fs.writeFileSync(pdfPath, pdf);
-          logMessage(` Saved: ${filename}`, 'SUCCESS');
+          // Create a new PDF document
+          const doc = new PDFDocument();
+          const stream = fs.createWriteStream(pdfPath);
+          
+          // Pipe the PDF to the file
+          doc.pipe(stream);
+          
+          // Add content to the PDF
+          doc.fontSize(16).text(title, { align: 'center' });
+          doc.moveDown();
+          doc.fontSize(12).text(`Generated on: ${new Date().toLocaleString()}`);
+          doc.moveDown();
+          
+          // Add some content from the HTML (simplified for this example)
+          // In a real implementation, you might want to use a HTML-to-PDF library
+          doc.fontSize(10).text('Document content from web page:', { underline: true });
+          doc.moveDown();
+          
+          // Extract text content from HTML
+          const textContent = html.replace(/<[^>]*>/g, ' ')
+                               .replace(/\s+/g, ' ')
+                               .trim();
+          
+          // Add the content to the PDF (limited to avoid huge files)
+          doc.text(textContent.substring(0, 2000) + '...');
+          
+          // Finalize the PDF and end the stream
+          doc.end();
+          
+          // Wait for the stream to finish
+          await new Promise((resolve, reject) => {
+            stream.on('finish', () => {
+              logMessage(` Saved: ${filename} as proper PDF`, 'SUCCESS');
+              resolve();
+            });
+            stream.on('error', reject);
+          });
           
           // Close current tab and switch back
           await driver.close();
@@ -524,16 +558,36 @@ app.get('/download-file', (req, res) => {
     // Construct the file path
     const filePath = path.join(SAVE_DIR, folder, file);
     logMessage(`Requested download for file: ${filePath}`, 'INFO');
-    
-    // Check if file exists
+      // Check if file exists
     if (!fs.existsSync(filePath)) {
       logMessage(`File not found: ${filePath}`, 'ERROR');
       return res.status(404).json({ message: "File not found" });
     }
     
+    // Get file stats
+    const stats = fs.statSync(filePath);
+    
     // Set headers for file download
     res.setHeader('Content-Disposition', `attachment; filename="${file}"`);
-    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', stats.size);
+    
+    // Determine content type based on file extension
+    const ext = path.extname(file).toLowerCase();
+    let contentType = 'application/octet-stream'; // Default
+    
+    if (ext === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (ext === '.html' || ext === '.htm') {
+      contentType = 'text/html';
+    } else if (ext === '.txt') {
+      contentType = 'text/plain';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      contentType = 'image/jpeg';
+    } else if (ext === '.png') {
+      contentType = 'image/png';
+    }
+    
+    res.setHeader('Content-Type', contentType);
     
     // Stream the file to the response
     const fileStream = fs.createReadStream(filePath);
@@ -612,6 +666,37 @@ app.get('/download-progress', (req, res) => {
     totalFiles: Object.keys(downloadProgress).length,
     completedFiles: Object.values(downloadProgress).filter(file => file.complete).length,
     totalSize: Object.values(downloadProgress).reduce((total, file) => total + file.size, 0)
+  });
+});
+
+// Special route for development to mark test files as complete
+app.get('/mark-test-files-complete', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ message: 'This endpoint is only available in development mode' });
+  }
+
+  const testFolder = path.join(SAVE_DIR, 'test_district');
+  if (!fs.existsSync(testFolder)) {
+    return res.status(404).json({ message: 'Test folder not found' });
+  }
+
+  let count = 0;
+  fs.readdirSync(testFolder).forEach(file => {
+    const filePath = path.join(testFolder, file);
+    if (fs.statSync(filePath).isFile()) {
+      downloadProgress[file] = {
+        path: filePath,
+        size: getFileSizeInBytes(filePath),
+        complete: true
+      };
+      count++;
+    }
+  });
+
+  broadcastDownloadProgress();
+  return res.json({ 
+    message: `Marked ${count} test files as complete`, 
+    files: Object.keys(downloadProgress).filter(name => downloadProgress[name].complete) 
   });
 });
 
@@ -762,6 +847,22 @@ if (process.env.NODE_ENV === 'production') {
 // Start server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  
+  // Add some test files to download progress for local testing
+  if (process.env.NODE_ENV !== 'production') {
+    const testFolder = path.join(SAVE_DIR, 'test_district');
+    if (fs.existsSync(testFolder)) {
+      fs.readdirSync(testFolder).forEach(file => {
+        const filePath = path.join(testFolder, file);
+        downloadProgress[file] = {
+          path: filePath,
+          size: getFileSizeInBytes(filePath),
+          complete: true
+        };
+      });
+      console.log(`Added ${Object.keys(downloadProgress).length} test files to download progress tracking`);
+    }
+  }
 });
 
 // Start watching the download folder

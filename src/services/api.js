@@ -171,6 +171,14 @@ export const apiService = {
       // Get the blob from the response
       const blob = await response.blob();
       
+      // Check if it's a PDF and validate the content type
+      if (fileName.toLowerCase().endsWith('.pdf')) {
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/pdf')) {
+          console.warn('Warning: PDF file does not have PDF content type:', contentType);
+        }
+      }
+      
       // Create a URL for the blob
       const url = window.URL.createObjectURL(blob);
       
