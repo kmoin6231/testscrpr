@@ -15,5 +15,12 @@ cd backend
 npm install
 cd ..
 
+# Ensure PDFKit is properly installed
+echo "Installing PDFKit and other PDF handling libraries..."
+npm install pdfkit --save
+cd backend
+npm install pdfkit --save
+cd ..
+
 # Done!
 echo "Build process completed!"
