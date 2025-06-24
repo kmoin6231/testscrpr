@@ -338,8 +338,7 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
       setShowSpinner(false);
     }
   };
-  
-  // Handle creating zip file
+    // Handle creating zip file
   const confirmCreateZip = () => {
     if (!folderName) {
       setError('Please enter a District Name first.');
@@ -357,13 +356,21 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
       setShowSpinner(true);
       setStatusMessage('Creating ZIP file...');
       setLogs(prevLogs => prevLogs + '\nCreating ZIP file...');
+      
+      // First create the ZIP file on the server
       const result = await apiService.createZip(folderName);
       setLogs(prevLogs => prevLogs + '\n' + result.message);
-      setStatusMessage('ZIP file created successfully!');
-      alert('Success: ' + result.message);
+      
+      // Then download it to the user's system
+      setStatusMessage('Downloading ZIP file...');
+      setLogs(prevLogs => prevLogs + '\nDownloading ZIP file...');
+      await apiService.downloadZipFile(folderName);
+      
+      setStatusMessage('ZIP file downloaded successfully!');
+      setLogs(prevLogs => prevLogs + '\nZIP file downloaded successfully!');
     } catch (error) {
-      setError(`Error creating ZIP: ${error.message || 'An unknown error occurred'}`);
-      setLogs(prevLogs => prevLogs + '\n' + `Error creating ZIP: ${error.message || 'An unknown error occurred'}`);
+      setError(`Error with ZIP: ${error.message || 'An unknown error occurred'}`);
+      setLogs(prevLogs => prevLogs + '\n' + `Error with ZIP: ${error.message || 'An unknown error occurred'}`);
     } finally {
       setShowSpinner(false);
     }
@@ -645,10 +652,12 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
           onClose={() => setTestResults(null)}
         />
       )}
-      
-      {/* Download Progress Display */}
+        {/* Download Progress Display */}
       {showDownloadProgress && Object.keys(downloadProgress).length > 0 && (
-        <DownloadProgress downloadProgress={downloadProgress} />
+        <DownloadProgress 
+          downloadProgress={downloadProgress} 
+          folderName={folderName} 
+        />
       )}
       
       <div className="log-controls">        <button type="button" onClick={clearLogs} className="control-button">

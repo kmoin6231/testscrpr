@@ -512,6 +512,99 @@ app.post('/create-zip', (req, res) => {
   }
 });
 
+// Route to download a specific file
+app.get('/download-file', (req, res) => {
+  try {
+    const { folder, file } = req.query;
+    
+    if (!folder || !file) {
+      return res.status(400).json({ message: "Folder name and file name are required" });
+    }
+    
+    // Construct the file path
+    const filePath = path.join(SAVE_DIR, folder, file);
+    logMessage(`Requested download for file: ${filePath}`, 'INFO');
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      logMessage(`File not found: ${filePath}`, 'ERROR');
+      return res.status(404).json({ message: "File not found" });
+    }
+    
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${file}"`);
+    res.setHeader('Content-Type', 'application/pdf');
+    
+    // Stream the file to the response
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+    fileStream.on('error', (error) => {
+      logMessage(`Error streaming file: ${error.message}`, 'ERROR');
+      if (!res.headersSent) {
+        res.status(500).json({ message: `Error streaming file: ${error.message}` });
+      }
+    });
+    
+  } catch (error) {
+    logMessage(`Error processing download request: ${error.message}`, 'ERROR');
+    if (!res.headersSent) {
+      res.status(500).json({ message: `Error processing download request: ${error.message}` });
+    }
+  }
+});
+
+// Route to download a zip file
+app.get('/download-zip', async (req, res) => {
+  try {
+    const { folder } = req.query;
+    
+    if (!folder) {
+      return res.status(400).json({ message: "Folder name is required" });
+    }
+    
+    // Path to folder to zip
+    const folderPath = path.join(SAVE_DIR, folder);
+    logMessage(`Requested ZIP download for folder: ${folderPath}`, 'INFO');
+    
+    // Check if folder exists
+    if (!fs.existsSync(folderPath)) {
+      logMessage(`Folder not found: ${folderPath}`, 'ERROR');
+      return res.status(404).json({ message: "Folder not found" });
+    }
+    
+    // Check if it's a directory
+    if (!fs.statSync(folderPath).isDirectory()) {
+      logMessage(`Path exists but is not a directory: ${folderPath}`, 'ERROR');
+      return res.status(400).json({ message: "Invalid folder path" });
+    }
+    
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${folder}.zip"`);
+    res.setHeader('Content-Type', 'application/zip');
+    
+    // Create zip archive stream
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    
+    // Pipe archive data to the response
+    archive.pipe(res);
+    
+    // Add files from directory to the archive
+    archive.directory(folderPath, false);
+    
+    // Finalize the archive
+    await archive.finalize();
+    
+    logMessage(`ZIP file created and streamed to client for folder: ${folder}`, 'SUCCESS');
+    
+  } catch (error) {
+    logMessage(`Error processing ZIP download request: ${error.message}`, 'ERROR');
+    if (!res.headersSent) {
+      res.status(500).json({ message: `Error processing ZIP download request: ${error.message}` });
+    }
+  }
+});
+
 // Route to get download progress
 app.get('/download-progress', (req, res) => {
   res.json({

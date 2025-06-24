@@ -150,6 +150,97 @@ export const apiService = {
     }
   },
   
+  // Download a file
+  downloadFile: async (folderName, fileName) => {
+    try {
+      // Create a download URL
+      const downloadUrl = `${API_URL}/download-file?folder=${encodeURIComponent(folderName)}&file=${encodeURIComponent(fileName)}`;
+      
+      // Use fetch with blob response to handle file downloads
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create an anchor element and set its properties
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      // Use the suggested filename from the Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const suggestedFilename = contentDisposition 
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+        : fileName;
+      a.download = suggestedFilename || fileName;
+      
+      // Append to the DOM, trigger the download, and clean up
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      return true;
+    } catch (error) {
+      console.error('File download failed:', error);
+      throw new Error(`Download failed: ${error.message || 'Unknown error'}`);
+    }
+  },
+  
+  // Download a zip file
+  downloadZipFile: async (folderName) => {
+    try {
+      // Create a download URL for the ZIP file
+      const downloadUrl = `${API_URL}/download-zip?folder=${encodeURIComponent(folderName)}`;
+      
+      // Use fetch with blob response to handle file downloads
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create an anchor element and set its properties
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${folderName}.zip`;
+      
+      // Append to the DOM, trigger the download, and clean up
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      return true;
+    } catch (error) {
+      console.error('ZIP download failed:', error);
+      throw new Error(`Download failed: ${error.message || 'Unknown error'}`);
+    }
+  },
+
   // Check if the server is online
   checkServerStatus: async () => {
     try {
