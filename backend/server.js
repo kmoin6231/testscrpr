@@ -13,14 +13,20 @@ const port = process.env.PORT || 5001;
 // Configure CORS options
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? '*' 
+    ? ['https://testscrpr-2.onrender.com', 'http://testscrpr-2.onrender.com', '*'] 
     : ['http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   optionsSuccessStatus: 200,
-  credentials: true
+  credentials: false // Set to false to avoid preflight issues
 };
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Add a simple health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
 app.use(express.json());
 
 // Serve static files from the React app if in production

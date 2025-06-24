@@ -31,10 +31,38 @@ const ScraperForm = () => {
   const [showDownloadProgress, setShowDownloadProgress] = useState(false);
   const [testResults, setTestResults] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [serverOnline, setServerOnline] = useState(true);
+  const [checkingServer, setCheckingServer] = useState(false);
   
   // Refs
   const statusRef = useRef(null);
   const eventSourceRef = useRef(null);
+  
+  // Check server connectivity on load and periodically
+  useEffect(() => {
+    const checkServerConnection = async () => {
+      setCheckingServer(true);
+      const isOnline = await apiService.checkServerStatus();
+      setServerOnline(isOnline);
+      setCheckingServer(false);
+      
+      if (!isOnline) {
+        setError('Server appears to be offline or slow to respond. Retrying connection...');
+      } else if (error.includes('Server appears to be offline')) {
+        setError(''); // Clear error when server comes back online
+      }
+    };
+    
+    // Check immediately on load
+    checkServerConnection();
+    
+    // Then check every 30 seconds
+    const interval = setInterval(checkServerConnection, 30000);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [error]);
   
   // Effect for dark mode
   useEffect(() => {
@@ -115,17 +143,28 @@ const ScraperForm = () => {
     setStartIndex('1');
     setLastIndex('10');
   };
-  
-  // Handle form submission
+    // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Clear previous error
     setError('');
     
+    // Check server status first
+    setStatusMessage('Checking server connection...');
+    setShowSpinner(true);
+    const isOnline = await apiService.checkServerStatus();
+    
+    if (!isOnline) {
+      setError('Cannot connect to server. Please try again later or contact support.');
+      setShowSpinner(false);
+      return;
+    }
+    
     // Validate form inputs
     if (!loginUrl || !tableUrls || !folderName) {
       setError('Please fill in all required fields');
+      setShowSpinner(false);
       return;
     }
     
@@ -137,12 +176,12 @@ const ScraperForm = () => {
       
     if (formattedTableUrls.length === 0) {
       setError('Please enter at least one valid table URL');
+      setShowSpinner(false);
       return;
     }
     
     // Set up loading state
     setIsLoading(true);
-    setShowSpinner(true);
     setStatusMessage('Starting scraping process...');
     setLogs('Starting...');
     setZipAvailable(false);
@@ -153,15 +192,25 @@ const ScraperForm = () => {
     }
     
     eventSourceRef.current = apiService.getEventSource();
-    eventSourceRef.current.onmessage = (event) => {
-      const msg = event.data;
-      setLogs(prevLogs => {
-        if (prevLogs === 'No logs yet. Start scraping to see real-time updates here.') {
-          return msg;
-        }
-        return prevLogs + '\n' + msg;
-      });
-    };
+    
+    if (eventSourceRef.current) {
+      eventSourceRef.current.onmessage = (event) => {
+        const msg = event.data;
+        setLogs(prevLogs => {
+          if (prevLogs === 'No logs yet. Start scraping to see real-time updates here.') {
+            return msg;
+          }
+          return prevLogs + '\n' + msg;
+        });
+      };
+      
+      eventSourceRef.current.onerror = (error) => {
+        console.error('EventSource error:', error);
+        setLogs(prevLogs => prevLogs + '\nLost connection to server log stream. Will continue in background.');
+      };
+    } else {
+      setLogs(prevLogs => prevLogs + '\nYour browser doesn\'t support real-time logging or the server is unavailable.');
+    }
     
     try {
       // Start scraping
@@ -189,8 +238,7 @@ const ScraperForm = () => {
       }
     }
   };
-  
-  // Handle testing of scraping configuration
+    // Handle testing of scraping configuration
   const handleTestConfiguration = async (e) => {
     e.preventDefault();
     
@@ -198,9 +246,21 @@ const ScraperForm = () => {
     setError('');
     setTestResults(null);
     
+    // Check server status first
+    setStatusMessage('Checking server connection...');
+    setShowSpinner(true);
+    const isOnline = await apiService.checkServerStatus();
+    
+    if (!isOnline) {
+      setError('Cannot connect to server. Please try again later or contact support.');
+      setShowSpinner(false);
+      return;
+    }
+    
     // Validate form inputs
     if (!loginUrl || !tableUrls || !folderName) {
       setError('Please fill in all required fields to test the configuration');
+      setShowSpinner(false);
       return;
     }
     
@@ -212,6 +272,7 @@ const ScraperForm = () => {
       
     if (formattedTableUrls.length === 0) {
       setError('Please enter at least one valid table URL');
+      setShowSpinner(false);
       return;
     }
     
@@ -251,6 +312,7 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
       });
     } finally {
       setIsTesting(false);
+      setShowSpinner(false);
     }
   };
   
@@ -362,6 +424,16 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
       
       <h1>Document Scraper</h1>
       {error && <div className="error-banner">{error}</div>}
+      
+      {/* Server Status Indicator */}
+      <div className={`server-status ${serverOnline ? 'online' : 'offline'} ${checkingServer ? 'checking' : ''}`}>
+        <span className="status-indicator"></span>
+        <span className="status-text">
+          {checkingServer 
+            ? 'Checking server connection...' 
+            : (serverOnline ? 'Server online' : 'Server offline or responding slowly')}
+        </span>
+      </div>
       
       <form onSubmit={handleSubmit}>
         <label htmlFor="loginUrl">

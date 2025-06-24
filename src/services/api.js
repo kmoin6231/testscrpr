@@ -11,8 +11,38 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 second timeout
-  withCredentials: true // For CORS with credentials
+  timeout: 60000, // Increased to 60 seconds for slow server startup
+  withCredentials: false // Changed to false to avoid CORS preflight issues
+});
+
+// Add retry interceptor
+api.interceptors.response.use(undefined, async (err) => {
+  const { config, message } = err;
+  if (!config || !config.retry) {
+    return Promise.reject(err);
+  }
+  
+  // Set the retry count
+  config.retryCount = config.retryCount || 0;
+  
+  // Check if we've maxed out the total number of retries
+  if (config.retryCount >= config.retry) {
+    console.error(`Max retries (${config.retry}) reached for request:`, config.url);
+    return Promise.reject(err);
+  }
+  
+  // Increase the retry count
+  config.retryCount += 1;
+  console.log(`Retrying request (${config.retryCount}/${config.retry}): ${config.url}`);
+  
+  // Create new promise to handle backoff
+  const backoff = new Promise((resolve) => {
+    setTimeout(() => resolve(), config.retryDelay || 1000);
+  });
+  
+  // Return the promise in which recalls axios to retry the request
+  await backoff;
+  return api(config);
 });
 
 // Error handler function
@@ -36,9 +66,13 @@ export const apiService = {
   // Start scraping process
   startScraping: async (data) => {
     try {
-      const response = await api.post('/scrape', data);
+      const response = await api.post('/scrape', data, {
+        retry: 3, // Retry up to 3 times
+        retryDelay: 2000 // Wait 2 seconds between retries
+      });
       return response.data;
     } catch (error) {
+      console.error('Scraping request failed:', error);
       handleApiError(error);
     }
   },
@@ -46,9 +80,13 @@ export const apiService = {
   // Abort scraping process
   abortScraping: async () => {
     try {
-      const response = await api.post('/abort');
+      const response = await api.post('/abort', {}, {
+        retry: 2,
+        retryDelay: 1000
+      });
       return response.data;
     } catch (error) {
+      console.error('Abort request failed:', error);
       handleApiError(error);
     }
   },
@@ -56,9 +94,13 @@ export const apiService = {
   // Create ZIP file
   createZip: async (folderName) => {
     try {
-      const response = await api.post('/create-zip', { folderName });
+      const response = await api.post('/create-zip', { folderName }, {
+        retry: 2,
+        retryDelay: 1000
+      });
       return response.data;
     } catch (error) {
+      console.error('Create ZIP request failed:', error);
       handleApiError(error);
     }
   },
@@ -66,25 +108,61 @@ export const apiService = {
   // Get download progress
   getDownloadProgress: async () => {
     try {
-      const response = await api.get('/download-progress');
+      const response = await api.get('/download-progress', {
+        retry: 2,
+        retryDelay: 1000
+      });
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      console.error('Download progress request failed:', error);
+      // Don't throw for progress requests to avoid breaking the UI
+      return { downloadProgress: {}, totalFiles: 0, completedFiles: 0, totalSize: 0 };
     }
   },
 
   // Get event source for real-time logging
   getEventSource: () => {
-    return new EventSource(`${API_URL}/stream`);
+    // Check if EventSource is supported
+    if (typeof EventSource === 'undefined') {
+      console.error('EventSource not supported in this browser');
+      return null;
+    }
+    
+    try {
+      return new EventSource(`${API_URL}/stream`);
+    } catch (error) {
+      console.error('Failed to create EventSource:', error);
+      return null;
+    }
   },
 
   // Test scraping configuration
   testScraping: async (data) => {
     try {
-      const response = await api.post('/test-scrape', data);
+      const response = await api.post('/test-scrape', data, {
+        retry: 2,
+        retryDelay: 1500
+      });
       return response.data;
     } catch (error) {
+      console.error('Test scraping request failed:', error);
       handleApiError(error);
     }
   },
+  
+  // Check if the server is online
+  checkServerStatus: async () => {
+    try {
+      // Send a simple request to check server availability
+      await api.get('/download-progress', { 
+        timeout: 10000, // Short timeout
+        retry: 1,
+        retryDelay: 1000
+      });
+      return true;
+    } catch (error) {
+      console.error('Server status check failed:', error);
+      return false;
+    }
+  }
 };

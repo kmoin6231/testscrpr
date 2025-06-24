@@ -392,6 +392,61 @@ body.dark .error-banner {
   }
 }
 
+/* Server status indicator */
+.server-status {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.server-status .status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.server-status.online {
+  background-color: rgba(0, 128, 0, 0.1);
+  color: #006400;
+}
+
+.server-status.online .status-indicator {
+  background-color: #00cc00;
+  box-shadow: 0 0 5px #00cc00;
+}
+
+.server-status.offline {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #cc0000;
+}
+
+.server-status.offline .status-indicator {
+  background-color: #ff3333;
+  box-shadow: 0 0 5px #ff3333;
+}
+
+.server-status.checking .status-indicator {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
 @media (max-width: 900px) {
   body {
     padding: 1rem;
