@@ -156,6 +156,8 @@ export const apiService = {
       // Create a download URL
       const downloadUrl = `${API_URL}/download-file?folder=${encodeURIComponent(folderName)}&file=${encodeURIComponent(fileName)}`;
       
+      console.log(`Attempting to download file from: ${downloadUrl}`);
+      
       // Use fetch with blob response to handle file downloads
       const response = await fetch(downloadUrl, {
         method: 'GET',
@@ -165,6 +167,8 @@ export const apiService = {
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Download error (${response.status}):`, errorText);
         throw new Error(`Server error: ${response.status}`);
       }
       
@@ -263,5 +267,16 @@ export const apiService = {
       console.error('Server status check failed:', error);
       return false;
     }
-  }
+  },
+
+  // Check if a file exists before attempting to download
+  checkFileExists: async (folderName, fileName) => {
+    try {
+      const response = await api.get(`/check-file?folder=${encodeURIComponent(folderName)}&file=${encodeURIComponent(fileName)}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking file existence:', error);
+      return { exists: false, error: error.message };
+    }
+  },
 };

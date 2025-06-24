@@ -414,10 +414,33 @@ app.post('/scrape', async (req, res) => {
           // Wait for the stream to finish
           await new Promise((resolve, reject) => {
             stream.on('finish', () => {
-              logMessage(` Saved: ${filename} as proper PDF`, 'SUCCESS');
-              resolve();
+              // Verify the file was created successfully
+              if (fs.existsSync(pdfPath)) {
+                const stats = fs.statSync(pdfPath);
+                if (stats.size > 0) {
+                  logMessage(` Saved: ${filename} as proper PDF (${stats.size} bytes)`, 'SUCCESS');
+                  
+                  // Add to download progress tracking
+                  downloadProgress[filename] = {
+                    path: pdfPath,
+                    size: stats.size,
+                    complete: true
+                  };
+                  
+                  resolve();
+                } else {
+                  logMessage(` Warning: ${filename} was created but has 0 bytes`, 'WARNING');
+                  reject(new Error('PDF file was created but has 0 bytes'));
+                }
+              } else {
+                logMessage(` Error: ${filename} was not created`, 'ERROR');
+                reject(new Error('PDF file was not created'));
+              }
             });
-            stream.on('error', reject);
+            stream.on('error', (err) => {
+              logMessage(` Error saving PDF: ${err.message}`, 'ERROR');
+              reject(err);
+            });
           });
           
           // Close current tab and switch back
@@ -552,16 +575,41 @@ app.get('/download-file', (req, res) => {
     const { folder, file } = req.query;
     
     if (!folder || !file) {
-      return res.status(400).json({ message: "Folder name and file name are required" });
+      logMessage(`Bad request: Missing folder or file parameter`, 'ERROR');
+      return res.status(400).json({ 
+        message: "Folder name and file name are required",
+        details: "Both folder and file query parameters must be provided"
+      });
     }
     
     // Construct the file path
     const filePath = path.join(SAVE_DIR, folder, file);
     logMessage(`Requested download for file: ${filePath}`, 'INFO');
-      // Check if file exists
+    
+    // Check if file exists
     if (!fs.existsSync(filePath)) {
       logMessage(`File not found: ${filePath}`, 'ERROR');
-      return res.status(404).json({ message: "File not found" });
+      
+      // Check if folder exists
+      const folderPath = path.join(SAVE_DIR, folder);
+      const folderExists = fs.existsSync(folderPath);
+      
+      // List available files in folder if it exists
+      let availableFiles = [];
+      if (folderExists) {
+        try {
+          availableFiles = fs.readdirSync(folderPath);
+        } catch (err) {
+          console.error(`Error reading directory: ${err.message}`);
+        }
+      }
+      
+      return res.status(404).json({ 
+        message: "File not found",
+        details: `The file "${file}" was not found in folder "${folder}"`,
+        folderExists: folderExists,
+        availableFiles: availableFiles
+      });
     }
     
     // Get file stats
@@ -833,6 +881,65 @@ app.post('/test-scrape', async (req, res) => {
         console.error(`Error closing test browser: ${error.message}`);
       }
     }
+  }
+});
+
+// Route to check if a file exists before attempting to download
+app.get('/check-file', (req, res) => {
+  try {
+    const { folder, file } = req.query;
+    
+    if (!folder || !file) {
+      return res.status(400).json({ 
+        exists: false, 
+        message: "Folder name and file name are required" 
+      });
+    }
+    
+    // Construct the file path
+    const filePath = path.join(SAVE_DIR, folder, file);
+    
+    // Check if file exists
+    const exists = fs.existsSync(filePath);
+    
+    // Get additional info if file exists
+    let fileInfo = null;
+    if (exists) {
+      const stats = fs.statSync(filePath);
+      fileInfo = {
+        size: stats.size,
+        created: stats.birthtime,
+        modified: stats.mtime
+      };
+    }
+    
+    // Get folder info
+    const folderPath = path.join(SAVE_DIR, folder);
+    const folderExists = fs.existsSync(folderPath);
+    
+    // List files in folder if it exists
+    let folderFiles = [];
+    if (folderExists) {
+      try {
+        folderFiles = fs.readdirSync(folderPath).filter(f => 
+          f.endsWith('.pdf') || f.endsWith('.zip')
+        );
+      } catch (err) {
+        console.error(`Error reading directory: ${err.message}`);
+      }
+    }
+    
+    return res.json({
+      exists,
+      fileInfo,
+      folderExists,
+      folderFiles
+    });
+  } catch (error) {
+    return res.status(500).json({ 
+      exists: false,
+      message: `Error checking file: ${error.message}` 
+    });
   }
 });
 

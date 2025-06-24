@@ -10,16 +10,51 @@ const DownloadProgress = ({ downloadProgress, folderName }) => {
     return null;
   }
 
-  // Handle download of a single file
+  // Handle download of a single file with pre-check
   const handleDownloadFile = async (filename) => {
     setDownloadingFile(filename);
     setDownloadError(null);
     
     try {
+      // First check if the file exists
+      console.log(`Checking if file exists: ${filename} in folder: ${folderName}`);
+      const checkResult = await apiService.checkFileExists(folderName, filename);
+      
+      if (!checkResult.exists) {
+        // File doesn't exist
+        console.error(`File does not exist: ${filename} in folder: ${folderName}`);
+        
+        let errorMessage = `Failed to download ${filename}: File not found on server.`;
+        
+        // Add helpful information if available
+        if (checkResult.folderExists && checkResult.folderFiles && checkResult.folderFiles.length > 0) {
+          errorMessage += ` Available files: ${checkResult.folderFiles.join(', ')}`;
+        } else if (!checkResult.folderExists) {
+          errorMessage += ` Folder "${folderName}" does not exist.`;
+        }
+        
+        setDownloadError(errorMessage);
+        return;
+      }
+      
+      // File exists, proceed with download
+      console.log(`File exists, downloading: ${filename} from folder: ${folderName}`);
       await apiService.downloadFile(folderName, filename);
     } catch (error) {
       console.error(`Error downloading file ${filename}:`, error);
-      setDownloadError(`Failed to download ${filename}: ${error.message}`);
+      
+      // Provide a more user-friendly error message
+      let errorMessage = `Failed to download ${filename}`;
+      
+      if (error.message.includes('404')) {
+        errorMessage += `: File not found on server. The file may not have been generated correctly during scraping.`;
+      } else if (error.message.includes('Server error')) {
+        errorMessage += `: ${error.message}. Please try again later.`;
+      } else {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      setDownloadError(errorMessage);
     } finally {
       setDownloadingFile(null);
     }
