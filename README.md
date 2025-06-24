@@ -59,55 +59,43 @@ The application uses environment variables for configuration:
 - Frontend: `REACT_APP_API_URL` - URL of the backend API
 - Backend: `PORT` - Port number for the server, `NODE_ENV` - Environment setting
 
-## Deployment to Render
+## Deployment on Render
 
-This application can be deployed to Render.com using either free or paid tiers.
+This application can be deployed to Render.com in three different ways:
 
-### Free Tier Deployment
+#### Option 1: Separate Frontend and Backend (Original)
+This option uses two separate services on Render - one for the frontend and one for the backend.
 
-To deploy on Render's free tier without using the Blueprint:
+1. Run the preparation script:
+   ```
+   # On Windows
+   .\prepare-for-free-tier.bat
+   
+   # On Linux/Mac
+   ./prepare-for-free-tier.sh
+   ```
+2. Push to your GitHub repository
+3. Create two services on Render using the `render.yaml` configuration
 
-1. Push this repository to GitHub
-2. Sign up for a Render account at https://render.com if you don't have one
+#### Option 2: Combined Deployment (Recommended)
+This option deploys a single service that serves both the backend and the frontend.
 
-3. **Deploy the Backend:**
-   - In Render dashboard, select "New Web Service"
-   - Connect your GitHub account and select this repository
-   - Configure the service:
-     - Name: `waqf-scraper-backend` (or your preferred name)
-     - Environment: `Node`
-     - Build Command: `cd backend && npm install`
-     - Start Command: `cd backend && npm start`
-     - Select "Free" plan
-     - Under Advanced, add these environment variables:
-       - `NODE_ENV`: `production`
-       - `PORT`: `10000`
-   - Click "Create Web Service"
+1. Run the preparation script:
+   ```
+   # On Windows
+   .\prepare-for-combined.bat
+   
+   # On Linux/Mac
+   ./prepare-for-combined.sh
+   ```
+2. Push to your GitHub repository
+3. Create a web service on Render using the `render.yaml` configuration
 
-4. **Deploy the Frontend:**
-   - Go back to dashboard and select "New Static Site"
-   - Connect to the same GitHub repository
-   - Configure:
-     - Name: `waqf-scraper-frontend` (or preferred name)
-     - Build Command: `npm install && npm run build`
-     - Publish Directory: `build`
-     - Add environment variable:
-       - `REACT_APP_API_URL`: URL of your backend service (e.g., `https://waqf-scraper-backend.onrender.com`)
-   - Click "Create Static Site"
-
-5. **Free Tier Limitations:**
-   - No persistent storage (files will be temporary and deleted when the service restarts)
-   - Services spin down after 15 minutes of inactivity (cold starts when you access after inactivity)
-   - Limited compute resources
-
-### Paid Tier Deployment (Blueprint Method)
-
-For production deployment with persistent storage:
-
-1. Push this repository to GitHub
-2. Connect your GitHub account to Render
-3. Create a new "Blueprint" on Render and select the repository
-4. Render will automatically create the frontend and backend services using the `render.yaml` configuration
+##### Why use the combined deployment?
+- Simplified deployment process with a single service
+- Reduced costs by only running one service
+- No CORS issues between frontend and backend
+- Better for free tier usage
 
 ## Development
 

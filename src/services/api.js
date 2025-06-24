@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Base URL of the backend API - use environment variable if available
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+// Base URL of the backend API - use environment variable if available, or relative path in production
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? '' // Use relative paths in production
+  : (process.env.REACT_APP_API_URL || 'http://localhost:5001');
 
 // Create an axios instance with base URL
 const api = axios.create({

@@ -13,7 +13,7 @@ const port = process.env.PORT || 5001;
 // Configure CORS options
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://waqf-scraper-frontend.onrender.com'] 
+    ? '*' 
     : ['http://localhost:3000'],
   optionsSuccessStatus: 200,
   credentials: true
@@ -22,6 +22,13 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Serve static files from the React app if in production
+if (process.env.NODE_ENV === 'production') {
+  const buildPath = path.join(__dirname, '..', 'build');
+  app.use(express.static(buildPath));
+  console.log(`Serving static files from: ${buildPath}`);
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -414,6 +421,14 @@ app.post('/create-zip', (req, res) => {
     return res.status(500).json({ message: `Error creating ZIP file: ${error.message}` });
   }
 });
+
+// Catch-all route to serve the React app for any unknown routes
+// This must be placed after all API routes
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'build', 'index.html'));
+  });
+}
 
 // Start server
 app.listen(port, () => {
