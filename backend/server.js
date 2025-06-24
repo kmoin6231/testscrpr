@@ -15,7 +15,7 @@ const port = process.env.PORT || 5001;
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://testscrpr-2.onrender.com', 'http://testscrpr-2.onrender.com', '*'] 
-    : ['http://localhost:3000'],
+    : ['http://localhost:3000', 'http://localhost:10000', 'http://0.0.0.0:10000', '*'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   optionsSuccessStatus: 200,
   credentials: false // Set to false to avoid preflight issues
@@ -1013,8 +1013,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Start server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port} and accessible from all network interfaces`);
   
   // Add some test files to download progress for local testing
   if (process.env.NODE_ENV !== 'production') {
