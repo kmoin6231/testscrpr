@@ -11,6 +11,8 @@
     "concurrently": "^8.2.2",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
+    "node-fetch": "^2.7.0",
+    "pdfkit": "^0.17.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
@@ -18,7 +20,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "node backend/server.js",
+    "start": "react-scripts start",
+    "start:server": "node backend/server.js",
     "build": "npm install && npm install --prefix backend && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

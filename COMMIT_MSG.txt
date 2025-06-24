@@ -1,0 +1,31 @@
+Comprehensive update with download improvements and error handling
+
+This commit includes:
+
+- Integration of PDFKit for proper PDF generation
+- Improved download functionality with proper MIME types
+- Enhanced error handling for file downloads
+- Reset functionality for stuck scraping operations
+- UI improvements for error display and recovery
+- Validation tools for PDF files
+- PowerShell script for reliable downloads
+- Comprehensive documentation updates
+- GitHub templates and configuration
+
+The update addresses issues with:
+- Files not being found after scraping
+- Invalid PDFs that wouldn't open in Adobe Acrobat
+- Stuck scraping operations
+- Download reliability
+
+Testing:
+- Validated PDF generation with PDFKit
+- Verified all download methods work correctly
+- Confirmed error handling and recovery functions
+
+Documentation:
+- Added TROUBLESHOOTING.md guide
+- Added DOWNLOAD-GUIDE.md with instructions
+- Updated README.md with recent changes
+- Added CONTRIBUTING.md guidelines
+- Added proper LICENSE file

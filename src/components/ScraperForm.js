@@ -33,6 +33,7 @@ const ScraperForm = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [serverOnline, setServerOnline] = useState(true);
   const [checkingServer, setCheckingServer] = useState(false);
+  const [scrapingStuck, setScrapingStuck] = useState(false);
   
   // Refs
   const statusRef = useRef(null);
@@ -143,8 +144,7 @@ const ScraperForm = () => {
     setStartIndex('1');
     setLastIndex('10');
   };
-    // Handle form submission
-  const handleSubmit = async (e) => {
+    // Handle form submission  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Clear previous error
@@ -158,6 +158,17 @@ const ScraperForm = () => {
     if (!isOnline) {
       setError('Cannot connect to server. Please try again later or contact support.');
       setShowSpinner(false);
+      return;
+    }
+    
+    // Check if a scraping operation is already in progress
+    setStatusMessage('Checking scraping status...');
+    const isScrapingActive = await checkScrapingStatus();
+    
+    if (isScrapingActive) {
+      setShowSpinner(false);
+      setScrapingStuck(true);
+      setError('A scraping operation is already in progress. You can wait for it to finish or reset it.');
       return;
     }
     
@@ -392,6 +403,83 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
     setShowConfirmDialog(false);
   };
   
+  // Check scraping status and reset if needed
+  const checkScrapingStatus = async () => {
+    try {
+      const status = await apiService.getScrapingStatus();
+      setScrapingStuck(status.isScrapingActive);
+      return status.isScrapingActive;
+    } catch (error) {
+      console.error('Error checking scraping status:', error);
+      return false;
+    }
+  };
+  
+  // Reset a stuck scraping operation
+  const resetScrapingOperation = async () => {
+    setStatusMessage('Resetting stuck scraping operation...');
+    setShowSpinner(true);
+    
+    try {
+      const result = await apiService.resetScraping(true); // Clear logs too
+      
+      if (result.wasActive) {
+        setStatusMessage('Previous scraping operation reset successfully');
+        setScrapingStuck(false);
+        // Wait a moment to ensure the server has fully reset
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return true;
+      } else {
+        setStatusMessage('No active scraping operation to reset');
+        setScrapingStuck(false);
+        return true;
+      }
+    } catch (error) {
+      setError(`Failed to reset scraping: ${error.message}`);
+      return false;
+    } finally {
+      setShowSpinner(false);
+    }
+  };
+  
+  // Force start scraping
+  const forceStartScraping = async () => {
+    setStatusMessage('Force starting scraping...');
+    setShowSpinner(true);
+    
+    try {
+      // Prepare the request data
+      const urlList = tableUrls.split('\n').filter(url => url.trim() !== '');
+      
+      const data = {
+        loginUrl,
+        urls: urlList,
+        folderName: folderName.trim(),
+        startIndex: startIndex.trim(),
+        lastIndex: lastIndex.trim()
+      };
+      
+      // Force start the scraping operation
+      await apiService.startScrapingWithForce(data, true);
+      
+      // Continue with scraping logic
+      setShowSpinner(false);
+      setStatusMessage('Scraping started successfully!');
+      setIsLoading(true);
+      
+      // Start event source to get real-time updates
+      startEventSource();
+      
+      // Focus on status area
+      if (statusRef.current) {
+        statusRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+      
+    } catch (error) {
+      setShowSpinner(false);      setError(`Error: ${error.message}`);
+    }
+  };
+  
   return (
     <div className="card">
       {showSpinner && <Spinner message={statusMessage} />}
@@ -429,8 +517,25 @@ Overall: ${response.success ? 'PASSED ✓' : 'FAILED ✗'}
         )}
       </button>
       
-      <h1>Document Scraper</h1>
-      {error && <div className="error-banner">{error}</div>}
+      <h1>Document Scraper</h1>      {error && (
+        <div className="error-banner">
+          <div>{error}</div>
+          {scrapingStuck && (
+            <div className="reset-section">
+              <button 
+                type="button" 
+                onClick={resetScrapingOperation}
+                className="reset-button"
+              >
+                Reset Stuck Scraping Operation
+              </button>
+              <p className="reset-info">
+                This will reset the current scraping operation and allow you to start a new one.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Server Status Indicator */}
       <div className={`server-status ${serverOnline ? 'online' : 'offline'} ${checkingServer ? 'checking' : ''}`}>

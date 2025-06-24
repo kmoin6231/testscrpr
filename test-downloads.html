@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test File Download</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            max-width: 800px;
+        }
+        h1 {
+            color: #333;
+        }
+        .file-link {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #333;
+        }
+        .file-link:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test PDF Files for Download</h1>
+    <p>
+        These links will download the test PDF files directly from the backend server.
+        The files should open correctly in Adobe Acrobat Reader.
+    </p>
+    
+    <h2>Individual Files</h2>
+    <a class="file-link" href="http://localhost:5001/download-file?folder=test_district&file=test_file_1.pdf">
+        Download test_file_1.pdf
+    </a>
+    <a class="file-link" href="http://localhost:5001/download-file?folder=test_district&file=test_file_2.pdf">
+        Download test_file_2.pdf
+    </a>
+    <a class="file-link" href="http://localhost:5001/download-file?folder=test_district&file=test_file_3.pdf">
+        Download test_file_3.pdf
+    </a>
+    
+    <h2>ZIP File</h2>
+    <a class="file-link" href="http://localhost:5001/download-zip?folder=test_district">
+        Download All Files as ZIP
+    </a>
+    
+    <h2>Fixed PDF File</h2>
+    <a class="file-link" href="http://localhost:5001/download-file?folder=jl&file=1_MH000013_MQ001.pdf">
+        Download Fixed PDF (Previously Invalid)
+    </a>
+    
+    <h2>Newly Scraped Files</h2>
+    <a class="file-link" href="http://localhost:5001/download-file?folder=wamsi_data&file=1_MH000013_MQ001.pdf">
+        Download WAMSI Scraped File
+    </a>
+    <a class="file-link" href="http://localhost:5001/download-zip?folder=wamsi_data">
+        Download WAMSI Files as ZIP
+    </a>
+    
+    <h2>Verification Steps</h2>
+    <ol>
+        <li>Click on any of the download links above</li>
+        <li>Once downloaded, try to open the PDF file with Adobe Acrobat</li>
+        <li>Verify that the file opens correctly without any errors</li>
+        <li>Check that the content of the PDF is readable and properly formatted</li>
+    </ol>
+    
+    <h2>Test Scraping Status</h2>
+    <div id="scraping-status-result"></div>
+    <button id="check-status-btn">Check Scraping Status</button>
+    <button id="reset-scraping-btn">Reset Scraping Status</button>
+    
+    <script>
+        // Add JavaScript to check scraping status and reset
+        document.getElementById('check-status-btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:5001/scraping-status');
+                const data = await response.json();
+                const resultDiv = document.getElementById('scraping-status-result');
+                resultDiv.innerHTML = `
+                    <div style="background-color: ${data.isScrapingActive ? '#ffeeee' : '#eeffee'}; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <p><strong>Status:</strong> ${data.isScrapingActive ? 'Scraping Active' : 'No Active Scraping'}</p>
+                        <p><strong>Timestamp:</strong> ${data.timestamp}</p>
+                        <p><strong>Recent Logs:</strong></p>
+                        <pre style="max-height: 200px; overflow: auto; background: #f5f5f5; padding: 10px;">${data.logs ? data.logs.join('\n') : 'No logs'}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error checking status:', error);
+                document.getElementById('scraping-status-result').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+        
+        document.getElementById('reset-scraping-btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:5001/reset-scraping?clearLogs=true', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                const resultDiv = document.getElementById('scraping-status-result');
+                resultDiv.innerHTML = `
+                    <div style="background-color: #eeffee; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <p><strong>Reset Result:</strong> ${data.message}</p>
+                        <p><strong>Was Active:</strong> ${data.wasActive ? 'Yes' : 'No'}</p>
+                    </div>
+                `;
+                
+                // Check status again after reset
+                setTimeout(() => document.getElementById('check-status-btn').click(), 500);
+            } catch (error) {
+                console.error('Error resetting status:', error);
+                document.getElementById('scraping-status-result').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

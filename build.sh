@@ -22,5 +22,23 @@ cd backend
 npm install pdfkit --save
 cd ..
 
+# Create necessary directories if they don't exist
+echo "Creating output directories..."
+mkdir -p backend/pdf_output
+mkdir -p backend/pdf_output/jl
+mkdir -p backend/pdf_output/test_district
+mkdir -p backend/pdf_output/wamsi_data
+
+# Copy test files if environment variable is set
+if [ "$INCLUDE_TEST_FILES" = "true" ]; then
+  echo "Setting up test files..."
+  node create-test-pdfs.js
+fi
+
+echo "Build completed successfully!"
+cd backend
+npm install pdfkit --save
+cd ..
+
 # Done!
 echo "Build process completed!"

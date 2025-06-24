@@ -11,7 +11,8 @@
 /build
 
 # PDF output files
-/backend/pdf_output
+/pdf_output
+/pdf_output/**/*
 
 # misc
 .DS_Store

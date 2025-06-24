@@ -5,16 +5,28 @@ A modern web application for scraping Waqf document data, generating PDFs, and c
 ## Features
 
 - Document scraping from multiple URLs
-- PDF generation and download
-- ZIP file creation
+- PDF generation and download (with PDFKit for reliable PDF creation)
+- ZIP file creation and download
 - Real-time logging with color-coded messages
 - Dark mode toggle
 - Responsive design
+- Robust error handling and recovery
+- File validation and conversion tools
+
+## Recent Updates
+
+- **PDF Generation**: Integrated PDFKit for proper PDF generation instead of HTML-to-PDF conversion
+- **Download Improvements**: Enhanced download functionality with proper MIME types and headers
+- **Error Handling**: Added robust error handling for file downloads and scraping operations
+- **Recovery Tools**: Added ability to reset stuck scraping operations
+- **File Validation**: Added tools to verify and fix PDF files
+- **Documentation**: Added troubleshooting guides and download instructions
 
 ## Project Structure
 
-- **Frontend**: React application
+- **Frontend**: React application with component-based architecture
 - **Backend**: Express server with Selenium for web scraping
+- **Tools**: Scripts for testing, validation, and file conversion
 
 ## Setup
 
@@ -51,6 +63,24 @@ A modern web application for scraping Waqf document data, generating PDFs, and c
    ```
 
 3. Access the application at http://localhost:3000
+
+## Using the Application
+
+1. **Scraping Documents**:
+   - Enter the login URL and table URLs
+   - Specify the folder name for saving files
+   - Set the start and end indices for pagination
+   - Click "Start Scraping"
+   - Monitor progress in the log window
+
+2. **Downloading Files**:
+   - Individual files can be downloaded after scraping completes
+   - Create and download ZIP archives of all scraped files
+   - See [DOWNLOAD-GUIDE.md](DOWNLOAD-GUIDE.md) for detailed instructions
+
+3. **Troubleshooting**:
+   - If you encounter issues, check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+   - Use the provided scripts to validate and fix PDF files
 
 ## Environment Configuration
 
@@ -97,7 +127,7 @@ This option deploys a single service that serves both the backend and the fronte
 - No CORS issues between frontend and backend
 - Better for free tier usage
 
-## Development
+## Development and Testing
 
 ### Building for Production
 
@@ -110,4 +140,29 @@ npm run build
 ```
 npm test
 ```
-# scrappingwithreact
+
+### Test Scripts
+
+The repository includes several test scripts:
+
+- `create-test-pdfs.js`: Creates test PDF files using PDFKit
+- `verify-pdf-files.js`: Validates PDF files to ensure they open correctly
+- `convert-invalid-pdfs.js`: Converts invalid PDFs to valid ones
+- `test-downloads.html`: Test page for verifying file downloads
+
+### Utility Scripts
+
+- `Download-Waqf-Files.ps1`: PowerShell script for downloading files to your Downloads folder
+- `run-scrape.js`: Script for running a scraping operation via API
+
+## Troubleshooting
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues and solutions.
+
+## Download Guide
+
+See [DOWNLOAD-GUIDE.md](DOWNLOAD-GUIDE.md) for detailed instructions on downloading files.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

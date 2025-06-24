@@ -253,7 +253,27 @@ function isInMaintenanceWindow() {
 app.post('/scrape', async (req, res) => {
   // Check if already scraping
   if (isScrapingActive) {
-    return res.status(400).json({ message: "A scraping operation is already in progress." });
+    // Allow force reset if requested
+    if (req.query.force === 'true') {
+      logMessage('Force-resetting previous scraping operation', 'WARNING');
+      isScrapingActive = false;
+      
+      // Attempt to close the driver if it exists
+      if (driver) {
+        try {
+          await driver.quit().catch(err => console.error('Error closing driver:', err));
+          driver = null;
+          logMessage('Selenium driver closed due to force reset', 'WARNING');
+        } catch (err) {
+          console.error('Error closing Selenium driver:', err);
+        }
+      }
+    } else {
+      return res.status(400).json({ 
+        message: "A scraping operation is already in progress.",
+        hint: "You can force reset by adding ?force=true to your request"
+      });
+    }
   }
   
   // Check for maintenance window
@@ -941,6 +961,47 @@ app.get('/check-file', (req, res) => {
       message: `Error checking file: ${error.message}` 
     });
   }
+});
+
+// Route to check scraping status
+app.get('/scraping-status', (req, res) => {
+  return res.json({
+    isScrapingActive,
+    logs: logMessages.slice(-50), // Return the most recent 50 log messages
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Route to reset scraping status
+app.post('/reset-scraping', (req, res) => {
+  const wasActive = isScrapingActive;
+  
+  // Reset scraping state
+  isScrapingActive = false;
+  
+  // Attempt to close the driver if it exists
+  if (driver) {
+    try {
+      driver.quit().catch(err => console.error('Error closing driver:', err));
+      driver = null;
+      logMessage('Selenium driver closed due to scraping reset', 'WARNING');
+    } catch (err) {
+      console.error('Error closing Selenium driver:', err);
+    }
+  }
+  
+  // Clear logs if requested
+  if (req.query.clearLogs === 'true') {
+    logMessages = [];
+    logMessage('Scraping logs cleared', 'INFO');
+  }
+  
+  return res.json({
+    message: wasActive 
+      ? "Scraping operation has been reset" 
+      : "No active scraping operation to reset",
+    wasActive
+  });
 });
 
 // Catch-all route to serve the React app for any unknown routes

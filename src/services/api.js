@@ -279,4 +279,39 @@ export const apiService = {
       return { exists: false, error: error.message };
     }
   },
+
+  // Get scraping status
+  getScrapingStatus: async () => {
+    try {
+      const response = await api.get('/scraping-status');
+      return response.data;
+    } catch (error) {
+      console.error('Error checking scraping status:', error);
+      return { isScrapingActive: false, error: error.message };
+    }
+  },
+  
+  // Reset scraping status
+  resetScraping: async (clearLogs = false) => {
+    try {
+      const response = await api.post(`/reset-scraping?clearLogs=${clearLogs}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error resetting scraping status:', error);
+      return { success: false, error: error.message };
+    }
+  },
+  
+  // Start scraping with force option
+  startScrapingWithForce: async (params, force = false) => {
+    try {
+      const response = await api.post(`/scrape?force=${force}`, params, {
+        retry: 3,
+        retryDelay: 1000
+      });
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };

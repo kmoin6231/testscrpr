@@ -326,22 +326,42 @@ button[type="submit"]:disabled {
 }
 
 .error-banner {
-  background-color: #fee2e2;
-  color: #ef4444;
-  border: 1px solid #ef4444;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 20px;
+  background-color: #fff4f4;
+  border: 1px solid var(--error);
+  color: var(--error);
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
   font-weight: 500;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  position: relative;
 }
 
-body.dark .error-banner {
-  background-color: #7f1d1d;
-  color: #fca5a5;  border-color: #b91c1c;
+.reset-section {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.reset-button {
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  margin-top: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+  background-color: #ff5252;
+}
+
+.reset-info {
+  font-size: 0.8rem;
+  margin-top: 5px;
+  color: #666;
 }
 
 .log-controls {

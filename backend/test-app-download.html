@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download Test</title>
+</head>
+<body>
+    <h1>Testing App Downloads</h1>
+    <p>Click the button below to test downloading a file to your Downloads folder:</p>
+    
+    <button id="downloadButton">Download WAMSI File</button>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <script>
+        document.getElementById('downloadButton').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Downloading...';
+            
+            try {
+                // This mimics exactly what your app's downloadFile function does
+                const downloadUrl = 'http://localhost:5001/download-file?folder=wamsi_data&file=1_MH000013_MQ001.pdf';
+                
+                const response = await fetch(downloadUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = '1_MH000013_MQ001.pdf';
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                resultDiv.innerHTML = 'Download complete! Check your Downloads folder.';
+            } catch (error) {
+                resultDiv.innerHTML = `Error: ${error.message}`;
+                console.error('Download failed:', error);
+            }
+        });
+    </script>
+</body>
+</html>
