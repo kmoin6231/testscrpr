@@ -9,8 +9,15 @@ const { DateTime } = require('luxon');
 const PDFDocument = require('pdfkit');
 
 const app = express();
-const port = process.env.PORT || 5001;
-const host = '0.0.0.0'; // Explicitly bind to all network interfaces
+const port = parseInt(process.env.PORT) || 5001; // Make sure it's an integer
+const host = process.env.HOST || '0.0.0.0'; // Explicitly bind to all network interfaces
+
+// Log environment for debugging
+console.log('==== Server Configuration ====');
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`PORT: ${port}`);
+console.log(`HOST: ${host}`);
+console.log('=============================');
 
 // Configure CORS options
 const corsOptions = {
@@ -27,7 +34,14 @@ app.use(cors(corsOptions));
 
 // Add a simple health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    environment: process.env.NODE_ENV,
+    port: port,
+    host: host,
+    timestamp: new Date().toISOString()
+  });
 });
 app.use(express.json());
 
@@ -1015,7 +1029,9 @@ if (process.env.NODE_ENV === 'production') {
 
 // Start server
 app.listen(port, host, () => {
-  console.log(`Server running on port ${port} and accessible from all network interfaces`);
+  console.log(`Server running at http://${host}:${port}/`);
+  console.log(`Server binding: ${host}:${port}`);
+  console.log('Server is ready to accept connections');
   
   // Add some test files to download progress for local testing
   if (process.env.NODE_ENV !== 'production') {
@@ -1031,6 +1047,11 @@ app.listen(port, host, () => {
       });
       console.log(`Added ${Object.keys(downloadProgress).length} test files to download progress tracking`);
     }
+  }
+}).on('error', (err) => {
+  console.error('Server error:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Please use a different port.`);
   }
 });
 
