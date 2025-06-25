@@ -10,6 +10,7 @@ const PDFDocument = require('pdfkit');
 
 const app = express();
 const port = process.env.PORT || 5001;
+const host = '0.0.0.0'; // Explicitly bind to all network interfaces
 
 // Configure CORS options
 const corsOptions = {
@@ -1013,7 +1014,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Start server
-app.listen(port, '0.0.0.0', () => {
+app.listen(port, host, () => {
   console.log(`Server running on port ${port} and accessible from all network interfaces`);
   
   // Add some test files to download progress for local testing
