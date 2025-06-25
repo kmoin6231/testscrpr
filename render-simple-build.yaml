@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: waqf-scraper
+    env: node
+    buildCommand: chmod +x ./render-build.sh && ./render-build.sh
+    startCommand: node backend/server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+    healthCheckPath: /health
