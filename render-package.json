@@ -1,0 +1,15 @@
+{
+  "name": "waqf-scraper-render",
+  "version": "1.0.0",
+  "description": "Simplified deployment for Render",
+  "main": "render-server.js",
+  "engines": {
+    "node": ">=18.x"
+  },
+  "scripts": {
+    "start": "node render-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

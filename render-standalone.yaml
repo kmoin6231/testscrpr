@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: waqf-scraper-standalone
+    env: node
+    buildCommand: chmod +x ./render-deploy.sh && ./render-deploy.sh
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: waqf-scraper-backend
+    env: node
+    buildCommand: |
+      npm install
+      cd backend && npm install
+      npm run build
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /health
+    rootDir: backend
