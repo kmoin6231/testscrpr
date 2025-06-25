@@ -21,9 +21,7 @@ console.log('=============================');
 
 // Configure CORS options
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://testscrpr-2.onrender.com', 'http://testscrpr-2.onrender.com', '*'] 
-    : ['http://localhost:3000', 'http://localhost:10000', 'http://0.0.0.0:10000', '*'],
+  origin: '*', // Allow all origins for simplicity
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   optionsSuccessStatus: 200,
   credentials: false // Set to false to avoid preflight issues
@@ -31,6 +29,18 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Root endpoint for health checks
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    environment: process.env.NODE_ENV,
+    port: port,
+    host: host,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Add a simple health check endpoint
 app.get('/health', (req, res) => {
